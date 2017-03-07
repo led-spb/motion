@@ -11,6 +11,7 @@ case "$1" in
      ;;
    photo)
      # send photo to MQTT with retain option
+     ln -f -s "$2" /home/hub/motion/lastsnap.jpg
      mosquitto_pub $MQTT_AUTH -t /home/alarm/camera/1/photo -f "$2" -r
      ;;
    video)
