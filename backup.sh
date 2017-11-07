@@ -30,7 +30,7 @@ then
 
   avconv -f mpegts -i $TMP_VIDEO -c:v $CODEC -an -y -f mp4 $TARGET_FILE && (
     echo Sending $TARGET_FILE
-    mosquitto_pub $MQTT_AUTH -t /home/alarm/camera/1/videom -f "$TARGET_FILE"
+    mosquitto_pub $MQTT_AUTH -t /home/camera/door/videom -f "$TARGET_FILE"
 
     echo Cleaning source files
     find -H $SOURCE -daystart -type f -name "$SRC_MASK" -mtime $MTIME -delete
