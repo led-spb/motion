@@ -5,6 +5,7 @@
 case "$1" in
    motion)
      mosquitto_pub $MQTT_AUTH -t /home/sensor/motion_door -m 1 -r
+     curl -s http://127.0.0.1:8082/0/action/snapshot >/dev/null 2>&1
      ;;
    motion_end)
      mosquitto_pub $MQTT_AUTH -t /home/sensor/motion_door -m 0 -r
