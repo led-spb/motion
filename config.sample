@@ -1,0 +1,16 @@
+MQTT="-u user -P password"
+
+TOPIC_MOTION=/home/sensor/motion_door
+TOPIC_PHOTO=/home/camera/door/photo
+TOPIC_VIDEO=/home/camera/door/video
+TOPIC_VIDEOM=/home/camera/door/videom
+
+FFMPEG=ffmpeg
+CODEC=h264_omx
+BITRATE=400000
+MEDIA_PATH=/home/hub/motion
+MEDIA_MASK="*_*.mp4"
+BACKUP_PATH="/media/yandex/motion"
+BACKUP_BITRATE=200000
+RETAIN_DAYS=14
+MTIME=1
