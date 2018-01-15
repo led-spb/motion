@@ -4,4 +4,5 @@
 *.jpg
 *.png
 *.pid
+*.lst
 config

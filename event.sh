@@ -1,6 +1,7 @@
 #!/bin/sh
 cd $(dirname $0)
 . ./config
+echo $(date -Is): $* >>event.log
 
 case "$1" in
    motion)
@@ -16,7 +17,7 @@ case "$1" in
      ln -f -s "$2" "$MEDIA_PATH/lastsnap.jpg"
      ;;
    video)
-     ./convert.sh "$2"
+     ln -f -s "$2.mp4" "$MEDIA_PATH/lastmotion.mp4"
      mosquitto_pub $MQTT -t $TOPIC_VIDEO -f "$MEDIA_PATH/lastmotion.mp4"
      ;;
 esac
