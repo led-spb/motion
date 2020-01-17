@@ -4,20 +4,32 @@ cd $(dirname $0)
 echo $(date -Is): $* >>event.log
 
 case "$1" in
-   motion)
+   # this event will be occured when motion is detected
+   # standart input contain snapshot in jpeg format
+   motion_on)
+     mosquitto_pub $MQTT -t $TOPIC_PHOTO -s -r
      mosquitto_pub $MQTT -t $TOPIC_MOTION -m 1 -r
-     curl -s http://127.0.0.1:8082/0/action/snapshot >/dev/null 2>&1
      ;;
-   motion_end)
+
+   # this event will be occured when motion is ended
+   motion_off)
      mosquitto_pub $MQTT -t $TOPIC_MOTION -m 0 -r
      ;;
-   photo)
+
+   # external action for make snapshot
+   snapshot)
      # send photo to MQTT with retain option
-     mosquitto_pub $MQTT -t $TOPIC_PHOTO -f "$2" -r
-     ln -f -s "$2" "$MEDIA_PATH/lastsnap.jpg"
+     curl -s http://127.0.0.1:8092/camera/snapshot | mosquitto_pub $MQTT -t $TOPIC_PHOTO -s -r
      ;;
-   video)
-     ln -f -s "$2.mp4" "$MEDIA_PATH/lastmotion.mp4"
-     mosquitto_pub $MQTT -t $TOPIC_VIDEO -f "$MEDIA_PATH/lastmotion.mp4"
+
+
+   # deprecated events from motion process
+   motion)
+     curl -s http://127.0.0.1:8092/camera/motion/start >/dev/null
+     ;;
+
+   motion_end)
+     curl -s http://127.0.0.1:8092/camera/motion/stop >/dev/null
+     #mosquitto_pub $MQTT -t $TOPIC_MOTION -m 0 -r
      ;;
 esac

@@ -5,4 +5,10 @@
 *.png
 *.pid
 *.lst
+bin/
+lib/
+local/
+include/
 config
+
+pip-selfcheck.json
