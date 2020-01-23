@@ -23,26 +23,26 @@ class MotionHandler(object):
         pass
 
 
-class FileIOStream(iostream.BaseIOStream):
+class FileOutputStream(object):
     def __init__(self, fp):
-        iostream.BaseIOStream.__init__(self)
         self.fp = fp
+        self.lock = Lock()
 
-    def fileno(self):
-        return self.fp.fileno()
-    
-    def close_fd(self):
-        self.fp.close()
-
-    def write_to_fd(self, data):
-        self.fp.write(data)
+    def write(self, data):
+        with self.lock:
+            self.fp.write(data)
         return len(data)
+
+    @property
+    def closed(self):
+        return self.fp.closed
    
-    def read_from_fd(self, buf):
-        return
+    def close(self):
+        with self.lock:
+            self.fp.close()
 
 
-class ProcessIOStream(object):
+class ProcessOutputStream(object):
     def __init__(self, command, output=None):
         logging.debug("spawn process %s", " ".join(command))
         self.process = subprocess.Popen( command, 
@@ -51,31 +51,31 @@ class ProcessIOStream(object):
         )
         self.lock = Lock()
         self.ioloop = ioloop.IOLoop.current()
-        self.check_closed()
+        self.ioloop.add_callback(self.check_closed)
         pass
     
     def write(self, b):
-        if not self.closed():
+        if not self.closed:
             with self.lock:
                 self.process.stdin.write(b)
         pass
 
     def close(self):
         try:
-            if not self.closed():
+            if not self.closed:
                 logging.debug('close spawned process')
-                #self.ioloop.add_callback(self.process.stdin.close)
                 with self.lock:
                     self.process.stdin.close()
         except:
             logging.exception('error while close spawned process')
             pass
 
+    @property
     def closed(self):
         return self.process.poll() is not None
 
     def check_closed(self):
-        if not self.closed():
+        if not self.closed:
             self.ioloop.add_timeout(1000, self.check_closed)
         pass
 
@@ -109,7 +109,7 @@ class MJPEGStreamBuffer(object):
             header = '\r\n'.join(
                 [ '--%s' % self.boundary, 'Content-Type: image/jpeg', 'Content-Length: %d' % len(frame), '', '']
             )
-            
+
             self.request_handler.write(header)
             self.request_handler.write(frame)
             self.request_handler.flush()
@@ -256,7 +256,7 @@ class Recorder(MotionHandler):
     def start_process(self, command_line, debug=False):
         output = "%s.log" % self.params.timestamp if debug else None
         cmd = command_line.format(**vars(self.params))
-        return ProcessIOStream(shlex.split(cmd), output)
+        return ProcessOutputStream(shlex.split(cmd), output)
         pass
 
     def motion_event(self, value):
@@ -309,10 +309,8 @@ class Recorder(MotionHandler):
 
         self.params.timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         logging.info('start recording')
-        #logging.debug('circular buffer position: %d', self.video_buffer.circular.tell())
 
-        #self.record_stream = self.start_process(self.params.on_record)
-        self.record_stream = open(self.params.motion_file.format(**vars(self.params)), 'wb')
+        self.record_stream = FileOutputStream(open(self.params.motion_file.format(**vars(self.params)), 'wb'))
         self.video_buffer.attach_stream(self.record_stream)
 
         buffer_stream = open(self.params.pre_motion_file.format(**vars(self.params)), 'wb')
