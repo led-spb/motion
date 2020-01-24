@@ -13,7 +13,6 @@ import picamera.array
 from datetime import datetime
 import numpy as np
 from tornado import web, httpserver, ioloop, gen, websocket, iostream
-#from base64 import b64encode
 from threading import Lock
 import shlex
 
@@ -80,44 +79,6 @@ class ProcessOutputStream(object):
         pass
 
 
-class MJPEGStreamBuffer(object):
-    def __init__(self, request_handler, boundary="MJPEGFRAME"):
-        self.request_handler = request_handler
-        self.boundary = boundary
-        self.buffer = io.BytesIO()
-        self.ioloop = ioloop.IOLoop.current()
-
-    def write(self, b):
-        if b.startswith(b'\xff\xd8'):
-            size = self.buffer.tell()
-            if size > 0:
-                frame = self.buffer.getvalue()
-
-                self.buffer.seek(0)
-                self.buffer.truncate()
-                #self.ioloop.add_callback(self.write_frame, frame)
-                self.write_frame(frame)
-
-        return self.buffer.write(b)
-    
-    def closed(self):
-        return self.request_handler.request.connection.stream.closed()
-
-    #@gen.coroutine
-    def write_frame(self, frame):
-        try:
-            header = '\r\n'.join(
-                [ '--%s' % self.boundary, 'Content-Type: image/jpeg', 'Content-Length: %d' % len(frame), '', '']
-            )
-
-            self.request_handler.write(header)
-            self.request_handler.write(frame)
-            self.request_handler.flush()
-        except:
-            logging.exception('write_frame error')
-        pass
-
-
 class VideoBuffer(object):
     def __init__(self, camera, pre_seconds):
         self.camera = camera
@@ -130,14 +91,12 @@ class VideoBuffer(object):
     def write(self, b):
         try:
             if True or self.write_to_circular:
-                #self.ioloop.add_callback(self.circular.write, b)
                 self.circular.write(b)
 
             for stream in list(self.out_fd):
                 if stream.closed:
                     self.out_fd.remove(stream)
                 else:
-                    #self.ioloop.add_callback(self.write_to_stream, stream, b)
                     stream.write(b)
         except:
             logging.exception('VideoBuffer exception')
@@ -274,12 +233,15 @@ class Recorder(MotionHandler):
             except:
                 logging.exception('start motion error')
 
+        self.ioloop.add_callback(self.schedule_motion_end)
+        pass
+
+    def schedule_motion_end(self):
         if self.motion_timeout is not None:
             self.ioloop.remove_timeout(self.motion_timeout)
-
         self.motion_timeout = self.ioloop.call_later(self.params.event_gap, self.end_motion)
-        self.last_motion = now
-        pass
+        self.last_motion = time.time()
+
 
     def end_motion(self):
         logging.info('motion event finished')
