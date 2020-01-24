@@ -8,12 +8,12 @@ case "$1" in
    # standart input contain snapshot in jpeg format
    motion_on)
      mosquitto_pub $MQTT -t $TOPIC_PHOTO -s -r
-     mosquitto_pub $MQTT -t $TOPIC_MOTION -m 1 -r
+     mosquitto_pub $MQTT -t $TOPIC_MOTION -m "{\"status\": 1, \"changed\": $(date +%s)}" -r
      ;;
 
    # this event will be occured when motion is ended
    motion_off)
-     mosquitto_pub $MQTT -t $TOPIC_MOTION -m 0 -r
+     mosquitto_pub $MQTT -t $TOPIC_MOTION -m "{\"status\": 0, \"changed\": $(date +%s)}" -r
      ;;
 
    # external action for make snapshot
@@ -32,4 +32,5 @@ case "$1" in
      curl -s http://127.0.0.1:8092/camera/motion/stop >/dev/null
      #mosquitto_pub $MQTT -t $TOPIC_MOTION -m 0 -r
      ;;
+
 esac
