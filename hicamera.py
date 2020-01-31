@@ -41,44 +41,6 @@ class FileOutputStream(object):
             self.fp.close()
 
 
-class ProcessOutputStream(object):
-    def __init__(self, command, output=None):
-        logging.debug("spawn process %s", " ".join(command))
-        self.process = subprocess.Popen( command, 
-            stdin=subprocess.PIPE, stdout=io.open(os.devnull, 'wb') if output is None else output, stderr=subprocess.STDOUT,
-            shell=False, close_fds=True            
-        )
-        self.lock = Lock()
-        self.ioloop = ioloop.IOLoop.current()
-        self.ioloop.add_callback(self.check_closed)
-        pass
-    
-    def write(self, b):
-        if not self.closed:
-            with self.lock:
-                self.process.stdin.write(b)
-        pass
-
-    def close(self):
-        try:
-            if not self.closed:
-                logging.debug('close spawned process')
-                with self.lock:
-                    self.process.stdin.close()
-        except:
-            logging.exception('error while close spawned process')
-            pass
-
-    @property
-    def closed(self):
-        return self.process.poll() is not None
-
-    def check_closed(self):
-        if not self.closed:
-            self.ioloop.add_timeout(1000, self.check_closed)
-        pass
-
-
 class VideoBuffer(object):
     def __init__(self, camera, pre_seconds):
         self.camera = camera
@@ -213,9 +175,9 @@ class Recorder(MotionHandler):
         self.snapshot_time = time.time()*1000
 
     def start_process(self, command_line, debug=False):
-        output = "%s.log" % self.params.timestamp if debug else None
         cmd = command_line.format(**vars(self.params))
-        return ProcessOutputStream(shlex.split(cmd), output)
+        logging.debug("spawn process %s", cmd)
+        subprocess.Popen(shlex.split(cmd))
         pass
 
     def motion_event(self, value):
@@ -224,32 +186,25 @@ class Recorder(MotionHandler):
             logging.info('motion event started (factor %d)', value)
             try:
                 self.start_record()
-
-                # send snapshot on first motion frame to process 
-                process = self.start_process(self.params.on_motion_begin)
-                buffer = self.take_snapshot()
-                process.write(buffer.getvalue())
-                process.close()
+                self.start_process(self.params.on_motion_begin)
             except:
                 logging.exception('start motion error')
 
         self.ioloop.add_callback(self.schedule_motion_end)
+        self.last_motion = time.time()
         pass
 
     def schedule_motion_end(self):
         if self.motion_timeout is not None:
             self.ioloop.remove_timeout(self.motion_timeout)
         self.motion_timeout = self.ioloop.call_later(self.params.event_gap, self.end_motion)
-        self.last_motion = time.time()
-
+        pass
 
     def end_motion(self):
         logging.info('motion event finished')
         try:
            self.stop_record()
-
-           process = self.start_process(self.params.on_motion_end)
-           process.close()
+           self.start_process(self.params.on_motion_end)
         except:
            logging.exception('end motion error')
         pass

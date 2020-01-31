@@ -5,6 +5,7 @@
 *.png
 *.pid
 *.lst
+*.h264
 bin/
 lib/
 local/

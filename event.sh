@@ -5,9 +5,8 @@ echo $(date -Is): $* >>event.log
 
 case "$1" in
    # this event will be occured when motion is detected
-   # standart input contain snapshot in jpeg format
    motion_on)
-     mosquitto_pub $MQTT -t $TOPIC_PHOTO -s -r
+     curl -s http://127.0.0.1:8092/camera/snapshot | mosquitto_pub $MQTT -t $TOPIC_PHOTO -s -r
      mosquitto_pub $MQTT -t $TOPIC_MOTION -m "{\"status\": 1, \"changed\": $(date +%s)}" -r
      ;;
 
